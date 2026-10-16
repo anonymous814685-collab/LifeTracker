@@ -84,3 +84,47 @@ label{display:block;font-size:13px;color:var(--muted);margin-bottom:12px}
 <div class="card" id="todayBox"></div>
 </section>
 <section id="exp" hidden></section>
+<section id="inv" hidden></section>
+<section id="plan" hidden></section><section id="week" hidden></section>
+<section id="rem" hidden></section>
+</main>
+<div class="banner" id="banner"></div>
+<div class="toast" id="toast"></div>
+<script>
+const KEY="life-tracker-v1";
+const WD=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"],MO=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const $=id=>document.getElementById(id), pad=n=>String(n).padStart(2,"0"), num=v=>Number(v)||0;
+const fmtKey=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const today=()=>fmtKey(new Date());
+const lab=d=>`${WD[d.getDay()]} ${d.getDate()} ${MO[d.getMonth()]}`;
+const isOff=d=>d.getDay()===4||d.getDay()===5;
+const esc=s=>String(s).replace(/[&"<]/g,c=>({"&":"&amp;","\"":"&quot;","<":"&lt;"}[c]));
+const fmt=n=>Number(n).toLocaleString("en-IN",{maximumFractionDigits:2});
+const sgn=n=>n>=0?"+":"";
+const cls=n=>n>=0?"ok":"bad";
+const pcOf=(a,b)=>b?a/b*100:0;
+const NDAYS=Math.round((new Date(2030,11,31)-new Date(2026,9,17))/864e5)+1;
+const DAYS=Array.from({length:NDAYS},(_,i)=>new Date(2026,9,17+i));
+const MS=Array.from({length:60},(_,i)=>{const d=new Date(2026,9+i,1);return{key:`${d.getFullYear()}-${pad(d.getMonth()+1)}`,label:`${MO[d.getMonth()]} ${d.getFullYear()}`};});
+const DEF_REM=[
+{id:1,time:"01:00",label:"Eat your tiffin on break, use phone less",on:true},
+{id:2,time:"01:30",label:"Last chai or coffee. After this, only water",on:true},
+{id:3,time:"03:30",label:"Eat fruit, chana or nuts",on:true},
+{id:4,time:"08:15",label:"Keep phone away, make the room dark",on:true},
+{id:5,time:"15:30",label:"Wake up: drink water, 5 min stretching (also set on phone)",on:false},
+{id:6,time:"18:30",label:"Pack tiffin (also set on phone)",on:false},
+{id:7,time:"19:00",label:"Leave home (also set on phone)",on:false}
+];
+const NEWS=[
+{d:"13 Oct 2026",t:"Nifty 50 closed at 22,721.95 (+1.60%) and Sensex at 73,033.78 (+1.54%). IT stocks rallied after HCLTech's Q2 results.",s:"Ventura Securities",u:"https://www.venturasecurities.com/?p=65192"},
+{d:"12 Oct 2026",t:"Markets fell. Sensex closed at 71,924.68 (-0.76%) and Nifty at 22,363.35 (-0.70%).",s:"Kotak Neo",u:"https://www.kotakneo.com/news/market-news/stock-market-update-13-october-2026-sensex-nifty/"},
+{d:"8 Oct 2026",t:"In early trade Sensex fell about 368 points and Nifty slipped below 22,500. The rupee opened near 96.7 per dollar.",s:"Kotak Neo",u:"https://www.kotakneo.com/news/market-news/stock-market-update-8-october-2026-sensex-nifty/"},
+{d:"Risks to watch",t:"Inflation, crude oil prices, rupee movement and how narrow the rally is across sectors remain the main risks.",s:"Ventura Securities",u:"https://www.venturasecurities.com/?p=65192"}
+];
+
+let state;
+try{state=JSON.parse(localStorage.getItem(KEY)||"null")}catch(e){state=null}
+if(!state)state={days:{},exp:{"2026-10":{salary:30000,doodh:4000,travel:6000,ghar:0,other:0}},target:30000};
+state.days=state.days||{};state.exp=state.exp||{};state.target=state.target||30000;state.rem=state.rem||DEF_REM;state.fired=state.fired||{};
+normalize();
+const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(state))}catch(e){}};
