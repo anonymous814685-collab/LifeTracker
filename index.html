@@ -172,3 +172,52 @@ $("todayBox").addEventListener("input",e=>{if(e.target.id==="nt")setDay("notes",
 $("prev").onclick=()=>{di=Math.max(0,di-1);renderToday();};
 $("next").onclick=()=>{di=Math.min(NDAYS-1,di+1);renderToday();};
 $("goToday").onclick=()=>{di=todayIdx();renderToday();};
+$("jump").addEventListener("change",e=>{const v=e.target.value;if(!v)return;const[y,m,d]=v.split("-").map(Number);di=Math.min(NDAYS-1,Math.max(0,Math.round((new Date(y,m-1,d)-DAYS[0])/864e5)));renderToday();});
+
+/* Kharch */
+const fld=(f,t,v)=>`<label>${t}<input type="number" inputmode="numeric" min="0" data-f="${f}" value="${v??""}"></label>`;
+function renderExp(){
+const m=MS[mi],e=state.exp[m.key]||{};
+const spend=num(e.doodh)+num(e.travel)+num(e.ghar)+num(e.other);
+const bachat=e.salary!=null?e.salary-spend:null;
+let run=0;
+for(let i=0;i<=mi;i++){const y=state.exp[MS[i].key]||{};if(y.salary!=null)run+=y.salary-(num(y.doodh)+num(y.travel)+num(y.ghar)+num(y.other));}
+const pc=Math.min(100,Math.max(0,run/state.target*100));
+$("exp").innerHTML=`
+<div class="dayNav"><button class="btn" id="mPrev">‹</button><div class="ctr"><div class="lbl">${m.label}</div><div class="muted">Enter salary and expenses, savings are calculated automatically</div></div><button class="btn" id="mNext">›</button></div>
+<div class="card">
+<div class="grid2">${fld("salary","Salary",e.salary)}${fld("doodh","Milk",e.doodh)}${fld("travel","Travel + food",e.travel)}${fld("ghar","Sent home",e.ghar)}${fld("other","Other",e.other)}</div>
+<div class="grid2" style="margin-top:6px"><div><div class="muted">Total kharch</div><div class="bigNum">${fmt(spend)}</div></div><div><div class="muted">Savings</div><div class="bigNum ${bachat!=null&&bachat<0?"bad":"ok"}">${bachat==null?"-":fmt(bachat)}</div></div></div>
+</div>
+<div class="card">
+<h2>Emergency fund</h2>
+<div class="progress"><div style="width:${pc}%"></div></div>
+<div class="muted" style="margin:8px 0 12px">${fmt(run)} / ${fmt(state.target)} (${Math.round(pc)}%)</div>
+<label>Target<input type="number" inputmode="numeric" id="tgt" value="${state.target}"></label>
+</div>`;
+}
+$("exp").addEventListener("change",e=>{
+const t=e.target;
+if(t.dataset.f){const k=MS[mi].key;state.exp[k]=state.exp[k]||{};state.exp[k][t.dataset.f]=t.value===""?null:Number(t.value);}
+else if(t.id==="tgt"){state.target=Math.max(1,num(t.value));}
+else return;
+save();renderExp();toast("Saved");
+});
+$("exp").addEventListener("click",e=>{
+if(e.target.id==="mPrev"){mi=Math.max(0,mi-1);renderExp();}
+if(e.target.id==="mNext"){mi=Math.min(MS.length-1,mi+1);renderExp();}
+});
+
+/* Invest */
+const CATS={stock:"Stocks",mf:"Mutual Funds",etf:"ETF"};
+const PH={stock:"Stock ka naam ya symbol (jaise TCS)",mf:"Mutual fund ka poora naam",etf:"ETF ka naam"};
+function vals(h){
+const cur=h.close!=null?h.close:h.buy, hasPrev=h.prev!=null;
+const inv=h.units*h.buy, val=h.units*cur;
+return{cur,inv,val,pl:val-inv,hasPrev,day:hasPrev?h.units*(cur-h.prev):0,base:h.units*(hasPrev?h.prev:cur)};
+}
+function agg(list){return list.map(vals).reduce((a,v)=>({inv:a.inv+v.inv,val:a.val+v.val,day:a.day+v.day,base:a.base+v.base}),{inv:0,val:0,day:0,base:0});}
+const stat=(a,b,c)=>`<div class="stat"><div class="muted">${a}</div><b class="${c||""}">${b}</b></div>`;
+function holdHTML(h){
+const v=vals(h);
+return `<div class="hold">
