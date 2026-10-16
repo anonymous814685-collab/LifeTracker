@@ -325,3 +325,30 @@ const daysTo=d=>Math.ceil((new Date(d+"T00:00")-new Date())/864e5);
 const renderAll=()=>{renderToday();renderExp();renderInv();renderWeek();renderPlan();};
 function bars(vals,color){
 const mx=Math.max(1,...vals.map(Math.abs));const w=100/vals.length;
+return `<svg viewBox="0 0 100 60" preserveAspectRatio="none" style="width:100%;height:110px">${vals.map((v,i)=>{const h=Math.abs(v)/mx*52;return `<rect x="${i*w+w*.15}" y="${58-h}" width="${w*.7}" height="${h}" fill="${color}"/>`}).join("")}</svg>`;
+}
+function trendHTML(){
+const wk=[];
+for(let w=Math.max(0,wkIdx-7);w<=wkIdx;w++){
+const hs=DAYS.slice(w*7,w*7+7).map(d=>state.days[fmtKey(d)]||{}).map(v=>hrs(v.sleep,v.wake)).filter(x=>x!=null);
+wk.push(hs.length?hs.reduce((a,b)=>a+b,0)/hs.length:0);
+}
+const mo=[];
+for(let i=Math.max(0,mi-5);i<=mi;i++){const y=state.exp[MS[i].key]||{};mo.push(y.salary!=null?y.salary-(num(y.doodh)+num(y.travel)+num(y.ghar)+num(y.other)):0);}
+return `<div class="card"><h2>Trends</h2><div class="muted">Sleep (avg hours), last 8 weeks</div>${bars(wk,"#2563eb")}<div class="muted" style="margin-top:12px">Monthly savings, last 6 months</div>${bars(mo,"#16a34a")}</div>`;
+}
+function trend2HTML(){
+const jk=[],wd=[];
+for(let w=Math.max(0,wkIdx-7);w<=wkIdx;w++){const ds=DAYS.slice(w*7,w*7+7).map(d=>state.days[fmtKey(d)]||{});jk.push(ds.reduce((a,v)=>a+num(v.junk),0));wd.push(ds.filter(v=>v.walk).length);}
+const wts=state.health.filter(x=>num(x.weight)>0).slice(-8).map(x=>num(x.weight));
+const mn=wts.length?Math.min(...wts):0;
+return `<div class="card"><h2>Junk, walk and weight</h2><div class="muted">Junk food (count), last 8 weeks</div>${bars(jk,"#dc2626")}<div class="muted" style="margin-top:12px">Walk days, last 8 weeks</div>${bars(wd,"#0ea5e9")}<div class="muted" style="margin-top:12px">Weight change (kg, from the lowest), last ${wts.length} entries</div>${wts.length?bars(wts.map(x=>x-mn),"#9333ea"):'<div class="muted">Add weight in health records</div>'}</div>`;
+}
+function renderPlan(){
+const c=state.career;
+const goals=state.goals.map(g=>{
+const pc=Math.min(100,g.target?g.saved/g.target*100:0);
+const need=Math.max(0,(g.target-g.saved)/monthsTo(g.date));
+return `<div class="hold"><div class="hTop"><b>${esc(g.name)}</b><button class="btn sm ghost" data-gdel="${g.id}">Remove</button></div><div class="muted">Target ${fmt(g.target)} · ${g.date}</div><div class="progress"><div style="width:${pc}%"></div></div><div class="grid2" style="margin-top:8px"><label>Saved so far<input type="number" data-gsave="${g.id}" value="${g.saved}"></label><div><div class="muted">Needed per month</div><b>${fmt(Math.round(need))}</b></div></div></div>`;
+}).join("")||'<div class="muted" style="margin-bottom:12px">No goals yet.</div>';
+const career=c.log.slice().reverse().map(x=>`<div class="rem2"><div><b>${esc(x.text)}</b><div class="muted">${x.date} · ${x.done?"Completed":"Pending"}</div></div><div class="row" style="margin:0"><button class="btn sm ghost" data-cdone="${x.id}">${x.done?"Undo":"Done"}</button><button class="btn sm ghost" data-cdel="${x.id}">Remove</button></div></div>`).join("")||'<div class="muted">No entries yet.</div>';
