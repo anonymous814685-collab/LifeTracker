@@ -249,3 +249,30 @@ ${stat("Current value",fmt(s.val))}
 ${stat("Total P&amp;L",sgn(pl)+fmt(pl)+" ("+pcOf(pl,s.inv).toFixed(1)+"%)",cls(pl))}
 ${stat("Today's change",sgn(s.day)+fmt(s.day)+" ("+pcOf(s.day,s.base).toFixed(2)+"%)",cls(s.day))}
 </div>
+<div class="muted" style="margin-top:10px">Overall: invested ${fmt(all.inv)}, current ${fmt(all.val)}</div><div class="muted" style="margin-top:6px">Allocation: ${["stock","mf","etf"].map(k=>CATS[k]+" "+(all.val?Math.round(agg(state.hold[k]).val/all.val*100):0)+"%").join(" · ")}</div><div class="muted" style="margin-top:6px">Realized P&amp;L (sold): ${fmt((state.realized||{}).stock||0)} stocks · ${fmt((state.realized||{}).mf||0)} MF · ${fmt((state.realized||{}).etf||0)} ETF</div>
+</div>
+<div class="card"><h2>Add new ${CATS[ct]}</h2>
+<label>Name<input type="text" id="hN" placeholder="${PH[ct]}"></label>
+<div class="grid2"><label>Units / shares<input type="number" step="any" inputmode="decimal" id="hU"></label><label>Buy price (per unit)<input type="number" step="any" inputmode="decimal" id="hB"></label></div>
+<label>Today's close price (optional)<input type="number" step="any" inputmode="decimal" id="hC"></label>
+<button class="btn pri" id="hAdd">Add</button>
+</div>
+${list.map(holdHTML).join("")||`<div class="muted" style="margin-bottom:12px">No ${CATS[ct]} yet.</div>`}
+<div class="card"><h2>My notes</h2>
+<div class="row"><input type="text" id="nNote" placeholder="Write a note or news item"><button class="btn pri" id="nAdd">Add</button></div>
+${state.notes.slice().reverse().map(n=>`<div class="rem2"><div><div>${esc(n.text)}</div><div class="muted">${n.date}</div></div><button class="btn sm ghost" data-nid="${n.id}">Remove</button></div>`).join("")||'<div class="muted">No notes yet.</div>'}
+</div>
+<div class="hint">Enter the day-end price every evening from your broker app. Mutual fund NAV updates overnight. This is only your record, not investment advice.</div>`;
+}
+$("inv").addEventListener("click",e=>{
+const t=e.target.closest("button");if(!t)return;
+if(t.dataset.ct){ct=t.dataset.ct;renderInv();return;}
+if(t.id==="hAdd"){
+const name=$("hN").value.trim(),units=Number($("hU").value),buy=Number($("hB").value),c=$("hC").value;
+if(!name||!units||!buy){toast("Enter name, units and buy price");return;}
+state.hold[ct].push({id:Date.now(),name,units,buy,close:c===""?null:Number(c),prev:null,cdate:c===""?null:today()});
+save();renderInv();toast("Saved");return;
+}
+if(t.dataset.buy){const[c,id]=t.dataset.buy.split(":");const h=state.hold[c].find(x=>String(x.id)===id);const u=Number($("bU"+id).value),p=Number($("bP"+id).value);if(!h||!u||!p){toast("Enter units and price");return;}const tot=h.units*h.buy+u*p;h.units+=u;h.buy=tot/h.units;save();renderInv();toast("Average updated");return;}
+if(t.dataset.sell){const[c,id]=t.dataset.sell.split(":");const h=state.hold[c].find(x=>String(x.id)===id);const u=Number($("sU"+id).value),p=Number($("sP"+id).value);if(!h||!u||!p||u>h.units){toast("Units (max "+(h?h.units:0)+") - enter valid units and price");return;}state.realized=state.realized||{stock:0,mf:0,etf:0};state.realized[c]=(state.realized[c]||0)+(p-h.buy)*u;h.units-=u;if(h.units<=0)state.hold[c]=state.hold[c].filter(x=>x!==h);save();renderInv();toast("Sale recorded");return;}
+if(t.dataset.del){const[c,id]=t.dataset.del.split(":");state.hold[c]=state.hold[c].filter(x=>String(x.id)!==id);save();renderInv();return;}
