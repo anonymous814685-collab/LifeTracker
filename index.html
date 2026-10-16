@@ -416,3 +416,67 @@ save();renderPlan();toast("Saved");
 function notifStat(){
 const el=$("notifStat");if(!el)return;
 let s="Notification: not supported in this browser";
+try{s="Notification: "+Notification.permission}catch(e){}
+el.textContent=s;
+}
+function renderRem(){
+const rows=state.rem.slice().sort((a,b)=>a.time.localeCompare(b.time)).map(r=>`
+<div class="rem">
+<input type="time" data-rt="${r.id}" value="${r.time}">
+<input type="text" data-rl="${r.id}" value="${esc(r.label)}">
+<input type="checkbox" data-ro="${r.id}" ${r.on?"checked":""} title="On / Off">
+<button class="btn sm ghost" data-rd="${r.id}">Remove</button>
+</div>`).join("");
+$("rem").innerHTML=`<div class="card">
+<h2>Reminders</h2>
+<div class="muted" style="margin-bottom:10px">Reminders only work while this page is open. For alarms when the phone is locked, use the phone's Clock app.</div>
+<div class="row"><button class="btn pri" id="notif">Enable notifications</button><button class="btn" id="addRem">+ New reminder</button></div>
+<div class="muted" id="notifStat" style="margin-bottom:6px"></div>
+${rows}
+</div>`;
+notifStat();
+}
+$("rem").addEventListener("change",e=>{
+const t=e.target,id=t.dataset.rt||t.dataset.rl||t.dataset.ro;if(!id)return;
+const r=state.rem.find(x=>String(x.id)===id);if(!r)return;
+if(t.dataset.rt)r.time=t.value;
+if(t.dataset.rl)r.label=t.value;
+if(t.dataset.ro)r.on=t.checked;
+save();renderRem();toast("Saved");
+});
+$("rem").addEventListener("click",async e=>{
+const t=e.target.closest("button");if(!t)return;
+if(t.dataset.rd){state.rem=state.rem.filter(x=>String(x.id)!==t.dataset.rd);save();renderRem();}
+else if(t.id==="addRem"){state.rem.push({id:Date.now(),time:"12:00",label:"New reminder",on:true});save();renderRem();}
+else if(t.id==="notif"){
+try{const p=await Notification.requestPermission();toast(p==="granted"?"Notifications enabled":"Notifications not allowed");}
+catch(err){toast("Notifications are not supported in this browser");}
+notifStat();
+}
+});
+function showBanner(text){
+const b=$("banner");
+b.innerHTML=`<div style="font-weight:bold;margin-bottom:6px">Reminder</div><div>${esc(text)}</div><button class="btn sm" id="okBtn" style="margin-top:10px">OK</button>`;
+b.classList.add("show");
+}
+$("banner").addEventListener("click",e=>{if(e.target.id==="okBtn")$("banner").classList.remove("show");});
+function beep(){
+try{const A=window.AudioContext||window.webkitAudioContext;const c=new A();const o=c.createOscillator(),g=c.createGain();o.connect(g);g.connect(c.destination);o.frequency.value=880;g.gain.value=0.2;o.start();o.stop(c.currentTime+0.6);}catch(e){}
+}
+function tick(){
+const n=new Date(),hm=pad(n.getHours())+":"+pad(n.getMinutes()),dk=fmtKey(n);
+state.rem.forEach(r=>{
+if(!r.on||r.time!==hm||state.fired[r.id]===dk)return;
+state.fired[r.id]=dk;save();
+showBanner(`${r.time} - ${r.label}`);
+beep();
+try{if("Notification" in window&&Notification.permission==="granted")new Notification("Life Tracker",{body:r.label});}catch(e){}
+try{navigator.vibrate&&navigator.vibrate([300,150,300]);}catch(e){}
+});
+}
+setInterval(tick,15000);
+
+/* Tabs */
+const render={aaj:renderToday,exp:renderExp,inv:renderInv,plan:renderPlan,week:renderWeek,rem:renderRem};
+document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>{
+document.querySelectorAll("nav button").forEach(x=>x.classList.toggle("on",x===b));
