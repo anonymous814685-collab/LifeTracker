@@ -480,3 +480,11 @@ setInterval(tick,15000);
 const render={aaj:renderToday,exp:renderExp,inv:renderInv,plan:renderPlan,week:renderWeek,rem:renderRem};
 document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>{
 document.querySelectorAll("nav button").forEach(x=>x.classList.toggle("on",x===b));
+document.querySelectorAll("main section").forEach(s=>s.hidden=s.id!==b.dataset.tab);
+render[b.dataset.tab]();
+});
+
+renderToday();renderExp();renderInv();renderWeek();renderPlan();renderRem();tick();
+</script>
+</body>
+</html>
