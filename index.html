@@ -276,3 +276,52 @@ save();renderInv();toast("Saved");return;
 if(t.dataset.buy){const[c,id]=t.dataset.buy.split(":");const h=state.hold[c].find(x=>String(x.id)===id);const u=Number($("bU"+id).value),p=Number($("bP"+id).value);if(!h||!u||!p){toast("Enter units and price");return;}const tot=h.units*h.buy+u*p;h.units+=u;h.buy=tot/h.units;save();renderInv();toast("Average updated");return;}
 if(t.dataset.sell){const[c,id]=t.dataset.sell.split(":");const h=state.hold[c].find(x=>String(x.id)===id);const u=Number($("sU"+id).value),p=Number($("sP"+id).value);if(!h||!u||!p||u>h.units){toast("Units (max "+(h?h.units:0)+") - enter valid units and price");return;}state.realized=state.realized||{stock:0,mf:0,etf:0};state.realized[c]=(state.realized[c]||0)+(p-h.buy)*u;h.units-=u;if(h.units<=0)state.hold[c]=state.hold[c].filter(x=>x!==h);save();renderInv();toast("Sale recorded");return;}
 if(t.dataset.del){const[c,id]=t.dataset.del.split(":");state.hold[c]=state.hold[c].filter(x=>String(x.id)!==id);save();renderInv();return;}
+if(t.id==="nAdd"){const text=$("nNote").value.trim();if(!text)return;state.notes.push({id:Date.now(),text,date:today()});save();renderInv();toast("Saved");return;}
+if(t.dataset.nid){state.notes=state.notes.filter(x=>String(x.id)!==t.dataset.nid);save();renderInv();}
+});
+$("inv").addEventListener("change",e=>{
+const t=e.target;if(t.dataset.cost){const[c,id]=t.dataset.cost.split(":");const h=state.hold[c].find(x=>String(x.id)===id);if(h){h.costs=num(t.value);save();renderInv();}return;}
+if(!t.dataset.close)return;
+const[c,id]=t.dataset.close.split(":");const h=state.hold[c].find(x=>String(x.id)===id);if(!h)return;
+if(t.value===""){h.close=null;h.prev=null;h.cdate=null;}
+else{if(h.cdate!==today()){h.prev=h.close!=null?h.close:null;}h.close=Number(t.value);h.cdate=today();}
+save();renderInv();toast("Saved");
+});
+
+/* Week */
+function renderWeek(){
+let html="";
+for(let w=wkIdx;w<=wkIdx&&w*7<NDAYS;w++){
+const ds=DAYS.slice(w*7,w*7+7).map(d=>state.days[fmtKey(d)]||{});
+const has=ds.some(v=>Object.keys(v).length>0);
+const hs=ds.map(v=>hrs(v.sleep,v.wake)).filter(x=>x!=null);
+const avg=hs.length?hs.reduce((a,b)=>a+b,0)/hs.length:null;
+const junk=ds.reduce((a,v)=>a+num(v.junk),0);
+const cnt=k=>ds.filter(v=>v[k]).length;
+const st=(l,txt,good,t)=>`<div class="stat"><div class="muted">${l}</div><b class="${!has?"":good?"ok":"bad"}">${txt}</b><div class="muted">Target: ${t}</div></div>`;
+html+=`<div class="card"><h2>Week of ${lab(DAYS[w*7])}</h2><div class="stats">
+${st("Sleep (avg)",avg==null?"-":avg.toFixed(1)+" h",avg!=null&&avg>=6,"6+ h")}
+${st("Junk food",junk,junk<=5,"5 or less")}
+${st("Walk",cnt("walk")+" din",cnt("walk")>=3,"3+ days")}
+${st("Skill-building",cnt("skill")+" din",cnt("skill")>=5,"5+ days")}
+${st("Meals on time",cnt("meals")+" din",cnt("meals")>=5,"5+ days")}
+${st("Phone limit",cnt("phone")+" din",cnt("phone")>=5,"5+ days")}
+</div></div>`;
+}
+$("week").innerHTML=`<div class="dayNav"><button class="btn" id="wPrev">‹</button><div class="ctr"><div class="lbl">Week ${wkIdx+1}</div><div class="muted">from ${lab(DAYS[wkIdx*7])}</div></div><button class="btn" id="wNext">›</button></div>`+html;
+}
+
+$("week").addEventListener("click",e=>{if(e.target.id==="wPrev"){wkIdx=Math.max(0,wkIdx-1);renderWeek();}if(e.target.id==="wNext"){wkIdx=Math.min(Math.floor((NDAYS-1)/7),wkIdx+1);renderWeek();}});
+
+/* Plan */
+function normalize(){
+state.days=state.days||{};state.exp=state.exp||{};state.target=state.target||30000;state.rem=state.rem||DEF_REM;state.fired=state.fired||{};
+state.notes=state.notes||[];state.hold=state.hold||{stock:[],mf:[],etf:[]};
+state.goals=state.goals||[];state.ins=state.ins||[];state.health=state.health||[];state.checkup=state.checkup||"";
+state.career=state.career||{salary:30000,target:35000,date:"2027-10-16",log:[]};
+}
+const monthsTo=d=>Math.max(1,Math.ceil((new Date(d+"T00:00")-new Date())/(30.4*864e5)));
+const daysTo=d=>Math.ceil((new Date(d+"T00:00")-new Date())/864e5);
+const renderAll=()=>{renderToday();renderExp();renderInv();renderWeek();renderPlan();};
+function bars(vals,color){
+const mx=Math.max(1,...vals.map(Math.abs));const w=100/vals.length;
