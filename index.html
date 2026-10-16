@@ -128,3 +128,47 @@ if(!state)state={days:{},exp:{"2026-10":{salary:30000,doodh:4000,travel:6000,gha
 state.days=state.days||{};state.exp=state.exp||{};state.target=state.target||30000;state.rem=state.rem||DEF_REM;state.fired=state.fired||{};
 normalize();
 const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(state))}catch(e){}};
+const hrs=(s,w)=>{if(!s||!w)return null;const[a,b]=s.split(":").map(Number),[c,g]=w.split(":").map(Number);let m=c*60+g-a*60-b;if(m<0)m+=1440;return m/60};
+
+function todayIdx(){const t=new Date();t.setHours(0,0,0,0);return Math.min(NDAYS-1,Math.max(0,Math.round((t-DAYS[0])/864e5)));}
+let di=todayIdx(), mi=0, ct="stock", wkIdx=Math.floor(todayIdx()/7);
+const dayKey=()=>fmtKey(DAYS[di]);
+const dd=()=>state.days[dayKey()]||{};
+const setDay=(k,v)=>{const key=dayKey();(state.days[key]=state.days[key]||{})[k]=v;save();};
+const done=v=>[v.walk,v.skill,v.meals,v.phone,num(v.paani)>=8].filter(Boolean).length;
+function toast(m){const t=$("toast");t.textContent=m;t.classList.add("show");clearTimeout(window._tt);window._tt=setTimeout(()=>t.classList.remove("show"),1200);}
+
+/* Aaj */
+const pill=(v,k,t,s)=>`<button class="pill ${v[k]?"on":""}" data-tog="${k}">${v[k]?"✓ ":""}${t}<small>${s}</small></button>`;
+const step=(v,k,t,s)=>`<div class="step"><div><b>${t}</b><div class="muted">${s}</div></div><div class="stepper"><button class="btn" data-step="${k}" data-d="-1">−</button><span class="val">${num(v[k])}</span><button class="btn" data-step="${k}" data-d="1">+</button></div></div>`;
+function renderToday(){
+const d=DAYS[di],v=dd(),h=hrs(v.sleep,v.wake),n=done(v);
+$("dayLbl").textContent=lab(d);
+$("dayType").textContent=isOff(d)?"Off day":"Shift day";
+$("prog").style.width=(n/5*100)+"%";
+$("progTxt").textContent=`${n} of 5 daily tasks done`;
+$("todayBox").innerHTML=`
+<div class="grid2"><label>Slept at<input type="time" id="sl" value="${v.sleep||""}"></label><label>Woke at<input type="time" id="wk" value="${v.wake||""}"></label></div>
+<div class="row"><button class="btn sm" data-now="sleep">Sleeping now</button><button class="btn sm" data-now="wake">Woke up now</button></div>
+<div class="muted">Sleep: <b>${h==null?"-":h.toFixed(1)} hours</b></div>
+${step(v,"paani","Water (glasses)","Target 8")}
+${step(v,"junk","Junk food","5 or fewer per week")}
+<div class="pills">${pill(v,"walk","Walk","20 min")}${pill(v,"skill","Skill-building","20 min")}${pill(v,"meals","Meals on time","Before and after shift")}${pill(v,"phone","Phone limit","Except breaks")}</div>
+<label>Notes<input type="text" id="nt" value="${esc(v.notes||"")}"></label>`;
+}
+$("todayBox").addEventListener("click",e=>{
+const b=e.target.closest("button");if(!b)return;
+if(b.dataset.tog){const k=b.dataset.tog;setDay(k,!dd()[k]);}
+else if(b.dataset.step){const k=b.dataset.step;setDay(k,Math.max(0,num(dd()[k])+Number(b.dataset.d)));}
+else if(b.dataset.now){const n=new Date();setDay(b.dataset.now,pad(n.getHours())+":"+pad(n.getMinutes()));}
+else return;
+renderToday();toast("Saved");
+});
+$("todayBox").addEventListener("change",e=>{
+if(e.target.id==="sl"){setDay("sleep",e.target.value);renderToday();toast("Saved");}
+if(e.target.id==="wk"){setDay("wake",e.target.value);renderToday();toast("Saved");}
+});
+$("todayBox").addEventListener("input",e=>{if(e.target.id==="nt")setDay("notes",e.target.value);});
+$("prev").onclick=()=>{di=Math.max(0,di-1);renderToday();};
+$("next").onclick=()=>{di=Math.min(NDAYS-1,di+1);renderToday();};
+$("goToday").onclick=()=>{di=todayIdx();renderToday();};
