@@ -376,3 +376,43 @@ ${trendHTML()}${trend2HTML()}
 <div class="grid2"><label>BP<input type="text" id="hBP" placeholder="120/80"></label><label>Sugar<input type="text" id="hS"></label></div>
 <label>Note<input type="text" id="hN2"></label><button class="btn pri" id="hAdd2b">Save record</button>
 <div style="margin-top:12px">${hl}</div></div>
+<div class="card"><h2>Backup</h2><div class="muted" style="margin-bottom:8px">Export to copy your data as text. In a new browser, paste it into Import to restore it.</div>
+<div style="margin-bottom:8px">${(()=>{const d=state.lastBackup?Math.floor((new Date()-new Date(state.lastBackup+"T00:00"))/864e5):null;return d==null?'<span class="bad">No backup taken yet</span>':d>7?`<span class="bad">Last backup ${d} days ago, back up now</span>`:`Last backup: ${state.lastBackup}`})()}</div><div class="row"><button class="btn" id="bExp">Export</button><button class="btn" id="bImp">Import</button></div>
+<textarea id="bTxt" rows="4" style="width:100%;border-radius:12px;padding:10px;background:var(--bg);color:var(--text);border:1px solid var(--line)"></textarea></div>`;
+}
+$("plan").addEventListener("click",e=>{
+const t=e.target.closest("button");if(!t)return;
+const del=(arr,id)=>arr.filter(x=>String(x.id)!==id);
+if(t.dataset.gdel){state.goals=del(state.goals,t.dataset.gdel);}
+else if(t.dataset.idel){state.ins=del(state.ins,t.dataset.idel);}
+else if(t.dataset.hdel){state.health=del(state.health,t.dataset.hdel);}
+else if(t.dataset.cdel){state.career.log=del(state.career.log,t.dataset.cdel);}
+else if(t.dataset.cdone){const x=state.career.log.find(y=>String(y.id)===t.dataset.cdone);if(x)x.done=!x.done;}
+else if(t.id==="cAdd"){const tx=$("cTxt").value.trim();if(!tx)return;state.career.log.push({id:Date.now(),text:tx,date:today(),done:false});}
+else if(t.id==="gAdd"){const n=$("gN").value.trim(),tg=Number($("gT").value),dt=$("gD").value;if(!n||!tg||!dt){toast("Enter name, target and date");return;}state.goals.push({id:Date.now(),name:n,target:tg,saved:num($("gS").value),date:dt});}
+else if(t.id==="iAdd2"){const rn=$("iRn").value;if(!rn){toast("Enter renewal date");return;}state.ins.push({id:Date.now(),type:$("iTy").value,provider:$("iPr").value.trim(),cover:num($("iCv").value),premium:num($("iPm").value),renew:rn});}
+else if(t.id==="hAdd2b"){state.health.push({id:Date.now(),date:$("hD").value||today(),weight:$("hW").value,bp:$("hBP").value,sugar:$("hS").value,note:$("hN2").value});}
+else if(t.id==="bExp"){state.lastBackup=today();$("bTxt").value=JSON.stringify(state);toast("Text ready, copy it");return;}
+else if(t.id==="bImp"){
+try{const s=JSON.parse($("bTxt").value);if(!s||!s.days)throw new Error("bad");state=s;normalize();save();renderAll();toast("Imported");}
+catch(err){toast("This is not valid backup text");}
+return;
+}
+else return;
+save();renderPlan();toast("Saved");
+});
+$("plan").addEventListener("change",e=>{
+const t=e.target;
+if(t.dataset.gsave){const g=state.goals.find(x=>String(x.id)===t.dataset.gsave);if(g)g.saved=num(t.value);}
+else if(t.id==="cSal"){const v=num(t.value);if(v!==state.career.salary){state.career.hist=state.career.hist||[];state.career.hist.push({date:today(),salary:v});}state.career.salary=v;}
+else if(t.id==="cTgt"){state.career.target=num(t.value);}
+else if(t.id==="cDate"){state.career.date=t.value;}
+else if(t.id==="hCk"){state.checkup=t.value;}
+else return;
+save();renderPlan();toast("Saved");
+});
+
+/* Reminder */
+function notifStat(){
+const el=$("notifStat");if(!el)return;
+let s="Notification: not supported in this browser";
