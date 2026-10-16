@@ -352,3 +352,27 @@ const need=Math.max(0,(g.target-g.saved)/monthsTo(g.date));
 return `<div class="hold"><div class="hTop"><b>${esc(g.name)}</b><button class="btn sm ghost" data-gdel="${g.id}">Remove</button></div><div class="muted">Target ${fmt(g.target)} · ${g.date}</div><div class="progress"><div style="width:${pc}%"></div></div><div class="grid2" style="margin-top:8px"><label>Saved so far<input type="number" data-gsave="${g.id}" value="${g.saved}"></label><div><div class="muted">Needed per month</div><b>${fmt(Math.round(need))}</b></div></div></div>`;
 }).join("")||'<div class="muted" style="margin-bottom:12px">No goals yet.</div>';
 const career=c.log.slice().reverse().map(x=>`<div class="rem2"><div><b>${esc(x.text)}</b><div class="muted">${x.date} · ${x.done?"Completed":"Pending"}</div></div><div class="row" style="margin:0"><button class="btn sm ghost" data-cdone="${x.id}">${x.done?"Undo":"Done"}</button><button class="btn sm ghost" data-cdel="${x.id}">Remove</button></div></div>`).join("")||'<div class="muted">No entries yet.</div>';
+const ins=state.ins.map(x=>{const d=daysTo(x.renew);return `<div class="rem2"><div><b>${esc(x.type)}</b> <span class="muted">${esc(x.provider)}</span><div class="muted">Cover ${fmt(x.cover)} · Premium ${fmt(x.premium)}/year</div><div class="${d<30?"bad":"muted"}">Renewal ${x.renew} · ${d<0?"expired":d+" days left"}</div></div><button class="btn sm ghost" data-idel="${x.id}">Remove</button></div>`}).join("")||'<div class="muted">No policies yet.</div>';
+const hl=state.health.slice().reverse().map(x=>`<div class="rem2"><div><b>${x.date}</b> <span class="muted">Weight ${esc(x.weight||"-")} · BP ${esc(x.bp||"-")} · Sugar ${esc(x.sugar||"-")}</span>${x.note?`<div class="muted">${esc(x.note)}</div>`:""}</div><button class="btn sm ghost" data-hdel="${x.id}">Remove</button></div>`).join("")||'<div class="muted">No records yet.</div>';
+$("plan").innerHTML=`
+${trendHTML()}${trend2HTML()}
+<div class="card"><h2>Salary goal</h2>
+<div class="grid2"><label>Current salary<input type="number" id="cSal" value="${c.salary}"></label><label>Target salary<input type="number" id="cTgt" value="${c.target}"></label></div>
+<label>Target date<input type="date" id="cDate" value="${c.date}"></label>
+<div class="muted">Gap: ${fmt(Math.max(0,c.target-c.salary))} per month · ${daysTo(c.date)} days left</div><div class="muted" style="margin-top:8px">Salary history: ${(c.hist||[]).map(x=>x.date+" → "+fmt(x.salary)).join(" · ")||"none yet"}</div></div>
+<div class="card"><h2>Career log</h2>
+<div class="row"><input type="text" id="cTxt" placeholder="Certification, appraisal, interview..."><button class="btn pri" id="cAdd">Add</button></div>${career}</div>
+<div class="card"><h2>Goals</h2>${goals}
+<div class="grid2"><label>Goal name<input type="text" id="gN" placeholder="House, car, retirement"></label><label>Target amount<input type="number" id="gT"></label></div>
+<div class="grid2"><label>Target date<input type="date" id="gD"></label><label>Saved so far<input type="number" id="gS"></label></div>
+<button class="btn pri" id="gAdd">Add goal</button></div>
+<div class="card"><h2>Insurance</h2>${ins}
+<div class="grid2"><label>Type<select id="iTy"><option>Health</option><option>Term</option><option>Vehicle</option><option>Other</option></select></label><label>Provider<input type="text" id="iPr"></label></div>
+<div class="grid2"><label>Cover<input type="number" id="iCv"></label><label>Premium (per year)<input type="number" id="iPm"></label></div>
+<label>Renewal date<input type="date" id="iRn"></label><button class="btn pri" id="iAdd2">Add policy</button></div>
+<div class="card"><h2>Health record</h2>
+<label>Next checkup date<input type="date" id="hCk" value="${state.checkup}"></label>
+<div class="grid2"><label>Date<input type="date" id="hD" value="${today()}"></label><label>Weight (kg)<input type="text" id="hW"></label></div>
+<div class="grid2"><label>BP<input type="text" id="hBP" placeholder="120/80"></label><label>Sugar<input type="text" id="hS"></label></div>
+<label>Note<input type="text" id="hN2"></label><button class="btn pri" id="hAdd2b">Save record</button>
+<div style="margin-top:12px">${hl}</div></div>
