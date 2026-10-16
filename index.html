@@ -221,3 +221,31 @@ const stat=(a,b,c)=>`<div class="stat"><div class="muted">${a}</div><b class="${
 function holdHTML(h){
 const v=vals(h);
 return `<div class="hold">
+<div class="hTop"><b>${esc(h.name)}</b><span style="display:flex;gap:6px"><a class="btn sm ghost" style="text-decoration:none;color:var(--accent)" href="https://www.google.com/search?q=${encodeURIComponent(h.name+" live price")}" target="_blank" rel="noopener">Live price</a><button class="btn sm ghost" data-del="${ct}:${h.id}">Remove</button></span></div>
+<div class="muted">${h.units} units · buy ${fmt(h.buy)} · invested ${fmt(v.inv)}</div>
+<div class="grid2" style="margin-top:10px">
+<label>Day-end price<input type="number" step="any" inputmode="decimal" data-close="${ct}:${h.id}" value="${h.close??""}"></label>
+<div><div class="muted">Current value</div><b style="font-size:20px">${fmt(v.val)}</b><div class="${cls(v.pl)}">P&amp;L ${sgn(v.pl)}${fmt(v.pl)} (${pcOf(v.pl,v.inv).toFixed(1)}%)</div></div>
+</div>
+<div class="grid2" style="margin-top:8px"><label>Brokerage + tax (total)<input type="number" step="any" data-cost="${ct}:${h.id}" value="${h.costs??""}"></label><label>Net P&amp;L<b class="${cls(v.pl-num(h.costs))}">${sgn(v.pl-num(h.costs))}${fmt(v.pl-num(h.costs))}</b></label></div>
+<div class="row" style="margin-top:6px"><input type="number" step="any" id="bU${h.id}" placeholder="Units"><input type="number" step="any" id="bP${h.id}" placeholder="Price"><button class="btn sm" data-buy="${ct}:${h.id}">Add buy</button></div>
+<div class="row" style="margin-top:6px"><input type="number" step="any" id="sU${h.id}" placeholder="Units sold"><input type="number" step="any" id="sP${h.id}" placeholder="Sell price"><button class="btn sm ghost" data-sell="${ct}:${h.id}">Sell</button></div>
+<div class="muted" style="margin-top:6px">${v.hasPrev?`Since last close: <span class="${cls(v.day)}">${sgn(v.day)}${fmt(v.day)} (${pcOf(v.day,v.base).toFixed(2)}%)</span>`:"No previous close yet"}${h.cdate?` · ${h.cdate}`:""}</div>
+</div>`;
+}
+function renderInv(){
+const list=state.hold[ct], s=agg(list), all=agg([...state.hold.stock,...state.hold.mf,...state.hold.etf]);
+const pl=s.val-s.inv;
+$("inv").innerHTML=`
+<div class="card"><h2>Market news</h2>
+<div class="muted" style="margin-bottom:6px">This is a snapshot (confirmed news up to 16 Oct 2026), not a live feed. For daily updates, ask me to "update the market news".</div>
+${NEWS.map(n=>`<div class="news"><div class="muted">${n.d}</div><div style="margin:4px 0">${n.t}</div><a href="${n.u}" target="_blank" rel="noopener">${n.s}</a></div>`).join("")}
+</div>
+<div class="subtabs">${Object.keys(CATS).map(k=>`<button class="${k===ct?"on":""}" data-ct="${k}">${CATS[k]}</button>`).join("")}</div>
+<div class="card">
+<div class="stats">
+${stat(CATS[ct]+" invested",fmt(s.inv))}
+${stat("Current value",fmt(s.val))}
+${stat("Total P&amp;L",sgn(pl)+fmt(pl)+" ("+pcOf(pl,s.inv).toFixed(1)+"%)",cls(pl))}
+${stat("Today's change",sgn(s.day)+fmt(s.day)+" ("+pcOf(s.day,s.base).toFixed(2)+"%)",cls(s.day))}
+</div>
